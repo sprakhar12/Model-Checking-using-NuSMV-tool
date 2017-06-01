@@ -1,0 +1,140 @@
+MODULE main
+VAR
+	at_n	:	boolean;
+	at_s	:	boolean;
+	at_w	:	boolean;
+	at_e	:	boolean;
+	
+	req_n	:	boolean;
+	req_s	:	boolean;
+	req_w	:	boolean;
+	req_e	:	boolean;
+	
+	n_light	:	boolean;
+	s_light	:	boolean;
+	w_light	:	boolean;
+	e_light	:	boolean;
+	
+	ns_lock	:	boolean;
+	we_lock	:	boolean;
+	
+	timer	:	{ idle, start, countdown, timeup };
+	switch	:	{ ns, we };
+	
+ASSIGN
+	init(at_n) :=	FALSE;
+	next(at_n) :=	{TRUE,FALSE};
+	init(at_s) :=	FALSE;
+	next(at_s) :=	{TRUE,FALSE};
+	init(at_w) :=	FALSE;
+	next(at_w) :=	{TRUE,FALSE};
+	init(at_e) :=	FALSE;
+	next(at_e) :=	{TRUE,FALSE};
+	init(req_n) := FALSE;
+	next(req_n) :=
+		case
+			at_n & !n_light	:	TRUE;
+			n_light	:	FALSE;
+			TRUE	:	req_n;
+		esac;
+	init(req_s) := FALSE;
+	next(req_s) :=
+		case
+			at_s & !s_light	:	TRUE;
+			s_light	:	FALSE;
+			TRUE	:	req_s;
+		esac;
+	init(req_w) := FALSE;
+	next(req_w) :=
+		case
+			at_w & !w_light	:	TRUE;
+			w_light	:	FALSE;
+			TRUE	:	req_w;
+		esac;
+	init(req_e) := FALSE;
+	next(req_e) :=
+		case
+			at_e & !e_light	:	TRUE;
+			e_light	:	FALSE;
+			TRUE		:	req_e;
+		esac;
+	
+	init(ns_lock) := FALSE;
+	next(ns_lock) :=
+		case
+			(req_n | req_s) & !we_lock & switch = ns & !(timer = timeup):	TRUE;
+			!n_light & !s_light	:	FALSE;
+			ns_lock & timer = timeup	:	FALSE;
+			TRUE				:	ns_lock;
+		esac;
+	init(we_lock) := FALSE;
+	next(we_lock) :=
+		case
+			(req_w | req_e) & !ns_lock & switch = we & !(timer = timeup):	TRUE;
+			!w_light & !e_light :	FALSE;
+			we_lock & timer = timeup	:	FALSE;
+			TRUE				:	we_lock;
+		esac;
+	
+	init(timer) := idle;
+	next(timer) :=
+		case
+			timer = idle & ns_lock & (req_w | req_e)	:	start;
+			timer = idle & we_lock & (req_n | req_s)	:	start;
+			timer = start	:	countdown;
+			timer = countdown	:	timeup;
+			timer = timeup	:	idle;
+			TRUE	:	timer;
+		esac;
+	init(switch) := ns;
+	next(switch) :=
+		case
+			(req_w | req_e) & !ns_lock & !req_n & !req_s	:	we;
+			timer = timeup & ns_lock	:	we;
+			(req_n | req_s) & !we_lock & !req_w & !req_e	:	ns;
+			timer = timeup & we_lock	:	ns;
+			TRUE	:	switch;
+		esac;	
+	
+	init(n_light) := FALSE;
+	next(n_light) :=
+		case
+			req_n & ns_lock & !n_light	:	TRUE;
+			n_light & !req_n	:	FALSE;
+			ns_lock & timer = timeup	:	FALSE;
+			TRUE	:	n_light;
+		esac;
+	init(s_light) := FALSE;
+	next(s_light) :=
+		case
+			req_s & ns_lock & !s_light	:	TRUE;
+			s_light & !req_s	:	FALSE;
+			ns_lock & timer = timeup	:	FALSE;
+			TRUE	:	s_light;
+		esac;
+	init(w_light) := FALSE;
+	next(w_light) :=
+		case
+			req_w & we_lock & !w_light	:	TRUE;
+			w_light & !req_w	:	FALSE;
+			we_lock & timer = timeup	:	FALSE;
+			TRUE	:	w_light;
+		esac;
+	init(e_light) := FALSE;
+	next(e_light) :=
+		case
+			req_e &	we_lock & !e_light	:	TRUE;
+			e_light & !req_e	:	FALSE;
+			we_lock & timer = timeup	:	FALSE;
+			TRUE	:	e_light;
+		esac;
+
+LTLSPEC G ! ( ( n_light | s_light ) & ( w_light | e_light ) )--Safety:The lights in cross directions are never green at same time
+LTLSPEC G( at_n = TRUE -> F (n_light = TRUE))--Liveness:Cars from any direction will eventually be given green lights
+LTLSPEC G( at_s = TRUE -> F (s_light = TRUE))
+LTLSPEC G( at_w = TRUE -> F (w_light = TRUE))
+LTLSPEC G( at_e = TRUE -> F (e_light = TRUE))
+LTLSPEC G( n_light = TRUE -> F (n_light = FALSE))
+LTLSPEC G( s_light = TRUE -> F (s_light = FALSE))
+LTLSPEC G( w_light = TRUE -> F (w_light = FALSE))
+LTLSPEC G( e_light = TRUE -> F (e_light = FALSE))
