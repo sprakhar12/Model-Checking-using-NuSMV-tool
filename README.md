@@ -1,4 +1,9 @@
 # ModelChecking
+
+Concentration - Software Engineering
+
+Team Members - 3
+
 **A traffic light control system**
 
 Tool - **NuSMV** to verify that a small software system and satisfies certain desired properties specified in LTL (Linear Temporal Logic).
@@ -25,7 +30,7 @@ The traffic-light control system generates four outputs with Boolean values that
 
 • e_light green light for traffic from the east
 
-Minimum Conditions met-
+**Minimum Conditions met-**
 
 1. Cars from any direction will eventually be given green lights
 2. The lights in cross directions are never green at same time
